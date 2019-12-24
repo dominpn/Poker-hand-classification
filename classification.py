@@ -8,7 +8,7 @@ from tensorflow.keras.optimizers import SGD
 from sklearn.model_selection import StratifiedKFold
 
 
-def one_hot_encode(x):
+def one_hot_encode(x: pd.Series) -> np.array:
     label = x.unique()
     label.sort()
     M = np.eye(x.nunique())
@@ -28,4 +28,8 @@ def create_input_layer(feature):
 
 df = pd.read_csv('poker-hand-testing.data', header=None, sep=',')
 
-print()
+features = df.iloc[:, :-1].copy()
+X = []
+Y = df[len(df.columns) - 1]
+for feature_column_number in features:
+    X.append(one_hot_encode(features[feature_column_number]))
