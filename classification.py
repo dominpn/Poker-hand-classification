@@ -9,6 +9,8 @@ from tensorflow.keras.optimizers import Adam
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import KFold
 
+from logger import AfterEpochLogger
+
 
 def one_hot_encode(x: pd.Series) -> np.array:
     label = x.unique()
@@ -61,6 +63,8 @@ model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=Adam()
 
 k_fold = KFold(n_splits=5)
 
+loggers = []
+
 for train_index, test_index in k_fold.split(X[0]):
     X_train = []
     X_test = []
@@ -71,7 +75,8 @@ for train_index, test_index in k_fold.split(X[0]):
 
     model = Model(inputs=inputs, outputs=y)
     model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=Adam())
-    model.fit(X_train, Y_train, validation_data=(X_test, Y_test), epochs=5, batch_size=8) # callbacks
+    logger = AfterEpochLogger(1)
+    model.fit(X_train, Y_train, validation_data=(X_test, Y_test), epochs=5, batch_size=128, callbacks=[logger])
 
     predicts_train = model.predict(X_train)
     score_train = roc_auc_score(Y_train, predicts_train)
@@ -79,5 +84,6 @@ for train_index, test_index in k_fold.split(X[0]):
     score = roc_auc_score(Y_test, predicts)
     print("%s %.2f%%" % ('Train data AUC value for that fold: ', score_train * 100))
     print("%s %.2f%%" % ('Test data AUC value for that fold: ', score * 100))
+    loggers.append(logger)
 
 
