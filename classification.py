@@ -28,8 +28,8 @@ def one_hot_encode(x: pd.Series) -> np.array:
 def create_input_layer(feature: np.array) -> (Tensor, Tensor):
     input_layer = Input(shape=(len(feature[0]),))
     x = Dense(2, activation='sigmoid', use_bias=True)(input_layer)
-    model = Model(inputs=input_layer, outputs=x)
-    return model.input, model.output
+    #model = Model(inputs=input_layer, outputs=x)
+    return input_layer, x
 
 
 df = pd.read_csv('poker-hand-testing.data', header=None, sep=',')
@@ -56,7 +56,7 @@ combined = concatenate(outputs)
 h1 = Dense(30, activation='sigmoid', use_bias=True)(combined)
 h2 = Dense(20, activation='sigmoid', use_bias=True)(h1)
 h3 = Dense(10, activation='sigmoid', use_bias=True)(h2)
-y = Dense(10, activation='softmax')(h3)
+y = Dense(10, activation='softmax')(h2)
 
 model = Model(inputs=inputs, outputs=y)
 model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=Adam())
@@ -79,6 +79,7 @@ for train_index, test_index in k_fold.split(X[0]):
     model = Model(inputs=inputs, outputs=y)
     model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=Adam())
     logger = AfterEpochLogger(1)
+    # TODO nie walidowac na testowych
     model.fit(X_train, Y_train, validation_data=(X_test, Y_test), epochs=1, batch_size=1024, callbacks=[logger])
 
     predicts_train = model.predict(X_train)
