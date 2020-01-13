@@ -28,14 +28,10 @@ def one_hot_encode(x: pd.Series) -> np.array:
 def create_input_layer(feature: np.array) -> (Tensor, Tensor):
     input_layer = Input(shape=(len(feature[0]),))
     x = Dense(2, activation='sigmoid', use_bias=True)(input_layer)
-    #model = Model(inputs=input_layer, outputs=x)
     return input_layer, x
 
 
 df = pd.read_csv('poker-hand-testing.data', header=None, sep=',')
-
-# TODO split
-# Number of Instances: 25010 training, 1,000,000 testing
 
 features = df.iloc[:, :-1].copy()
 X = []
@@ -55,13 +51,7 @@ combined = concatenate(outputs)
 
 h1 = Dense(30, activation='sigmoid', use_bias=True)(combined)
 h2 = Dense(20, activation='sigmoid', use_bias=True)(h1)
-h3 = Dense(10, activation='sigmoid', use_bias=True)(h2)
 y = Dense(10, activation='softmax')(h2)
-
-model = Model(inputs=inputs, outputs=y)
-model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=Adam())
-
-# print(model.summary())
 
 k_fold = KFold(n_splits=5)
 
@@ -77,15 +67,14 @@ for train_index, test_index in k_fold.split(X[0]):
     Y_train, Y_test = Y[train_index], Y[test_index]
 
     model = Model(inputs=inputs, outputs=y)
-    model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=Adam())
-    logger = AfterEpochLogger(1)
-    # TODO nie walidowac na testowych
-    model.fit(X_train, Y_train, validation_data=(X_test, Y_test), epochs=1, batch_size=1024, callbacks=[logger])
+    model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer=Adam())
+    logger = AfterEpochLogger(5)
+    model.fit(X_train, Y_train, validation_split=0.2, epochs=40, batch_size=32, callbacks=[logger])
 
     predicts_train = model.predict(X_train)
-    score_train = roc_auc_score(Y_train, predicts_train)
+    score_train = roc_auc_score(Y_train, predicts_train, average='micro')
     predicts = model.predict(X_test)
-    score = roc_auc_score(Y_test, predicts) # TODO 3 fold does not work
+    score = roc_auc_score(Y_test, predicts, average='micro')
     print("%s %.2f%%" % ('Train data AUC value for that fold: ', score_train * 100))
     print("%s %.2f%%" % ('Test data AUC value for that fold: ', score * 100))
     scores.append(score * 100)
@@ -109,7 +98,7 @@ plt.plot(loggers[4].history_loss)
 plt.legend(['Fold 1', 'Fold 2', 'Fold 3', 'Fold 4', 'Fold 5'])
 plt.subplot(422)
 plt.title('Averaged training loss')
-avg_loss = np.sum([loggers[i].history_loss for i in range(5)],axis=0)/5
+avg_loss = np.sum([loggers[i].history_loss for i in range(5)], axis=0)/5
 plt.ylim([0, 1])
 plt.plot(avg_loss)
 
@@ -122,7 +111,7 @@ plt.plot(loggers[2].val_history_loss)
 plt.plot(loggers[3].val_history_loss)
 plt.plot(loggers[4].val_history_loss)
 plt.subplot(424)
-avg_val_loss = np.sum([loggers[i].val_history_loss for i in range(5)],axis=0)/5
+avg_val_loss = np.sum([loggers[i].val_history_loss for i in range(5)], axis=0)/5
 plt.ylim([0,1])
 plt.plot(avg_val_loss)
 
@@ -135,7 +124,7 @@ plt.plot(loggers[2].history_accuracy)
 plt.plot(loggers[3].history_accuracy)
 plt.plot(loggers[4].history_accuracy)
 plt.subplot(426)
-avg_acc = np.sum([loggers[i].history_accuracy for i in range(5)],axis=0)/5
+avg_acc = np.sum([loggers[i].history_accuracy for i in range(5)], axis=0)/5
 plt.ylim([0, 1])
 plt.plot(avg_acc)
 
@@ -148,7 +137,7 @@ plt.plot(loggers[2].val_history_accuracy)
 plt.plot(loggers[3].val_history_accuracy)
 plt.plot(loggers[4].val_history_accuracy)
 plt.subplot(428)
-avg_val_acc = np.sum([loggers[i].val_history_accuracy for i in range(5)],axis=0)/5
+avg_val_acc = np.sum([loggers[i].val_history_accuracy for i in range(5)], axis=0)/5
 plt.ylim([0, 1])
 plt.plot(avg_val_acc)
 
