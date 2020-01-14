@@ -27,7 +27,7 @@ def one_hot_encode(x: pd.Series) -> np.array:
 
 def create_input_layer(feature: np.array) -> (Tensor, Tensor):
     input_layer = Input(shape=(len(feature[0]),))
-    x = Dense(2, activation='sigmoid', use_bias=True)(input_layer)
+    x = Dense(2, activation='relu', use_bias=True)(input_layer)
     return input_layer, x
 
 
@@ -49,8 +49,8 @@ for i in range(len(X)):
 
 combined = concatenate(outputs)
 
-h1 = Dense(30, activation='sigmoid', use_bias=True)(combined)
-h2 = Dense(20, activation='sigmoid', use_bias=True)(h1)
+h1 = Dense(30, activation='relu', use_bias=True)(combined)
+h2 = Dense(20, activation='relu', use_bias=True)(h1)
 y = Dense(10, activation='softmax')(h2)
 
 k_fold = KFold(n_splits=5)
@@ -69,7 +69,7 @@ for train_index, test_index in k_fold.split(X[0]):
     model = Model(inputs=inputs, outputs=y)
     model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer=Adam())
     logger = AfterEpochLogger(5)
-    model.fit(X_train, Y_train, validation_split=0.2, epochs=40, batch_size=32, callbacks=[logger])
+    model.fit(X_train, Y_train, validation_split=0.2, epochs=10, batch_size=256, callbacks=[logger])
 
     predicts_train = model.predict(X_train)
     score_train = roc_auc_score(Y_train, predicts_train, average='micro')
@@ -141,4 +141,4 @@ avg_val_acc = np.sum([loggers[i].val_history_accuracy for i in range(5)], axis=0
 plt.ylim([0, 1])
 plt.plot(avg_val_acc)
 
-plt.show()
+plt.savefig('plot.png')
