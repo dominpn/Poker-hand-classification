@@ -5,6 +5,7 @@ from tensorflow import Tensor
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Input, Dense, concatenate
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.utils import plot_model
 
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import KFold
@@ -42,10 +43,19 @@ for feature_column_number in features:
 inputs = []
 outputs = []
 
-for i in range(len(X)):
-    input, output = create_input_layer(X[i])
-    inputs.append(input)
-    outputs.append(output)
+for i in range(0, len(X), 2):
+    # input, output = create_input_layer(X[i])
+    input_figure = Input(shape=(len(X[i][0]),))
+    input_color = Input(shape=(len(X[i+1][0]),))
+
+    figure_layer = Dense(5, activation='relu', use_bias=True)(input_figure)
+    color_layer = Dense(2, activation='relu', use_bias=True)(input_color)
+    # color
+
+    card_layer = Dense(5, activation='relu', use_bias=True)(concatenate([figure_layer, color_layer]))
+    inputs.append(input_figure)
+    inputs.append(input_color)
+    outputs.append(card_layer)
 
 combined = concatenate(outputs)
 
@@ -68,6 +78,7 @@ for train_index, test_index in k_fold.split(X[0]):
 
     model = Model(inputs=inputs, outputs=y)
     model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer=Adam())
+    plot_model(model, to_file='model.png')
     logger = AfterEpochLogger(5)
     model.fit(X_train, Y_train, validation_split=0.2, epochs=10, batch_size=256, callbacks=[logger])
 
