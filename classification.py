@@ -30,7 +30,7 @@ def create_input_layer(feature: np.array) -> (Tensor, Tensor):
     return input_layer, x
 
 
-df_train = pd.read_csv('poker-hand.data', header=None, sep=',')
+df_train = pd.read_csv('poker-hand-training-true.data', header=None, sep=',')
 
 features = df_train.iloc[:, :-1].copy()
 X_train = []
@@ -75,7 +75,7 @@ scores = []
 model = Model(inputs=inputs, outputs=y)
 model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer=Adam())
 logger = AfterEpochLogger(5)
-model.fit(X_train, Y_train, validation_split=0.2, epochs=500, batch_size=256, callbacks=[logger])
+model.fit(X_train, Y_train, validation_split=0.2, epochs=300, batch_size=32, callbacks=[logger], shuffle=True)
 
 predicts_train = model.predict(X_train)
 score_train = roc_auc_score(Y_train, predicts_train, average='micro')
