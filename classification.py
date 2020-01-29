@@ -3,7 +3,7 @@ import numpy as np
 
 from tensorflow import Tensor
 from tensorflow.keras import Model
-from tensorflow.keras.layers import Input, Dense, concatenate
+from tensorflow.keras.layers import Input, Dense, concatenate, Dropout
 from tensorflow.keras.optimizers import Adam
 
 from sklearn.metrics import roc_auc_score
@@ -65,17 +65,19 @@ for i in range(0, len(X_train), 2):
 
 combined = concatenate(outputs)
 
-h1 = Dense(30, activation='relu', use_bias=True)(combined)
-h2 = Dense(20, activation='relu', use_bias=True)(h1)
-y = Dense(10, activation='softmax')(h2)
+h1 = Dense(512, activation='relu', use_bias=True)(combined)
+drop1 = Dropout(0.2)(h1)
+h2 = Dense(512, activation='relu', use_bias=True)(drop1)
+drop2 = Dropout(0.2)(h2)
+y = Dense(10, activation='softmax')(drop2)
 
 loggers = []
 scores = []
 
 model = Model(inputs=inputs, outputs=y)
-model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer=Adam())
+model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=Adam())
 logger = AfterEpochLogger(5)
-model.fit(X_train, Y_train, validation_split=0.2, epochs=300, batch_size=32, callbacks=[logger], shuffle=True)
+model.fit(X_train, Y_train, validation_data=(X_test, Y_test), epochs=300, batch_size=32, callbacks=[logger], shuffle=True)
 
 predicts_train = model.predict(X_train)
 score_train = roc_auc_score(Y_train, predicts_train, average='micro')
