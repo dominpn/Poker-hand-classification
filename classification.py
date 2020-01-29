@@ -2,9 +2,9 @@ import pandas as pd
 import numpy as np
 
 from tensorflow import Tensor
-from tensorflow.keras import Model
-from tensorflow.keras.layers import Input, Dense, concatenate
+from tensorflow.keras.layers import Input, Dense
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.models import Sequential
 
 from sklearn.metrics import roc_auc_score
 
@@ -30,52 +30,58 @@ def create_input_layer(feature: np.array) -> (Tensor, Tensor):
     return input_layer, x
 
 
+def group(df):
+    total_list = []
+
+    for row in df.iterrows():
+
+        grouped_list = []
+
+        for x in range(1, len(row[1]), 2):
+            grouped_list.append(int(str(row[1][x - 1]) + str(row[1][x])))
+
+        total_list.append(grouped_list)
+
+    return total_list
+
+
 df_train = pd.read_csv('poker-hand-training-true.data', header=None, sep=',')
 
-features = df_train.iloc[:, :-1].copy()
-X_train = []
+X_train = group(df_train.iloc[:, :-1].copy())
 Y_train = one_hot_encode(df_train[len(df_train.columns) - 1])
-for feature_column_number in features:
-    X_train.append(one_hot_encode(features[feature_column_number]))
 
 
 df_test = pd.read_csv('poker-hand-testing.data', header=None, sep=',')
-features = df_test.iloc[:, :-1].copy()
-X_test = []
+X_test = group(df_test.iloc[:, :-1].copy())
 Y_test = one_hot_encode(df_test[len(df_test.columns) - 1])
-for feature_column_number in features:
-    X_test.append(one_hot_encode(features[feature_column_number]))
-
-inputs = []
-outputs = []
-
-for i in range(0, len(X_train), 2):
-    # input, output = create_input_layer(X[i])
-    input_figure = Input(shape=(len(X_train[i][0]),))
-    input_color = Input(shape=(len(X_train[i+1][0]),))
-
-    figure_layer = Dense(5, activation='relu', use_bias=True)(input_figure)
-    color_layer = Dense(2, activation='relu', use_bias=True)(input_color)
-    # color
-
-    card_layer = Dense(5, activation='relu', use_bias=True)(concatenate([figure_layer, color_layer]))
-    inputs.append(input_figure)
-    inputs.append(input_color)
-    outputs.append(card_layer)
-
-combined = concatenate(outputs)
-
-h1 = Dense(30, activation='relu', use_bias=True)(combined)
-h2 = Dense(20, activation='relu', use_bias=True)(h1)
-y = Dense(10, activation='softmax')(h2)
 
 loggers = []
 scores = []
 
-model = Model(inputs=inputs, outputs=y)
-model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer=Adam())
 logger = AfterEpochLogger(5)
-model.fit(X_train, Y_train, validation_split=0.2, epochs=300, batch_size=32, callbacks=[logger], shuffle=True)
+
+model = Sequential()
+model.add(Dense(30, activation='relu', input_shape=(5,)))
+model.add(Dense(20, activation='relu'))
+model.add(Dense(10, activation='softmax'))
+
+model.summary()
+
+model.compile(loss='categorical_crossentropy',
+              optimizer=Adam(0.001),
+              metrics=['accuracy'])
+
+history = model.fit(np.array(X_train), np.array(Y_train),
+                    batch_size=32,
+                    epochs=200,
+                    verbose=1,
+                    validation_split=0.2,
+                    callbacks=[logger])
+
+score = model.evaluate(np.array(X_test), np.array(Y_test), verbose=0)
+
+print('Test loss:', score[0])
+print('Test accuracy:', score[1])
 
 predicts_train = model.predict(X_train)
 score_train = roc_auc_score(Y_train, predicts_train, average='micro')
