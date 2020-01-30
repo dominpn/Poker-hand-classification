@@ -2,8 +2,9 @@ import pandas as pd
 import numpy as np
 
 from tensorflow.keras import Model
-from tensorflow.keras.layers import Input, Dense, concatenate
+from tensorflow.keras.layers import Input, Dense
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import ModelCheckpoint
 
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import KFold
@@ -47,10 +48,10 @@ k_fold = KFold(n_splits=5)
 
 model = Model(inputs=inputs, outputs=y)
 model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer=Adam())
+cp_callback = ModelCheckpoint(filepath='poker-model.h5', save_weights_only=False, save_best_only=True, verbose=1)
 
 for train_index, val_index in k_fold.split(X_train):
     result = next(k_fold.split(X_train), None)
-    print(result)
 
     x_train = X_train[result[0]]
     x_val = X_train[result[1]]
@@ -59,7 +60,7 @@ for train_index, val_index in k_fold.split(X_train):
     y_val = Y_train[result[1]]
 
     logger = AfterEpochLogger(5)
-    model.fit(x_train, y_train, validation_data=(x_val, y_val), epochs=10, batch_size=32, callbacks=[logger], shuffle=True)
+    model.fit(x_train, y_train, validation_data=(x_val, y_val), epochs=10, batch_size=32, callbacks=[logger, cp_callback], shuffle=True)
 
     predicts_train = model.predict(X_train)
     score_train = roc_auc_score(Y_train, predicts_train, average='micro')

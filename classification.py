@@ -59,9 +59,10 @@ for i in range(0, len(X_train), 2):
 
 combined = concatenate(outputs)
 
-h1 = Dense(50, activation='relu', use_bias=True)(combined)
-h2 = Dense(30, activation='relu', use_bias=True)(h1)
-y = Dense(10, activation='softmax')(h2)
+h1 = Dense(100, activation='relu', use_bias=True)(combined)
+h2 = Dense(200, activation='relu', use_bias=True)(h1)
+h3 = Dense(100, activation='relu', use_bias=True)(h2)
+y = Dense(10, activation='softmax')(h3)
 
 loggers = []
 scores = []
@@ -80,7 +81,7 @@ for train_index, val_index in k_fold.split(X_train[0]):
     Y_train_split, Y_val = Y_train[train_index], Y_train[val_index]
 
     logger = AfterEpochLogger(5)
-    model.fit(X_train_split, Y_train_split, validation_data=(X_val, Y_val), epochs=10, batch_size=32, callbacks=[logger], shuffle=True)
+    model.fit(X_train_split, Y_train_split, validation_data=(X_val, Y_val), epochs=100, batch_size=32, callbacks=[logger], shuffle=True)
 
     predicts_train = model.predict(X_train)
     score_train = roc_auc_score(Y_train, predicts_train, average='micro')
@@ -90,11 +91,6 @@ for train_index, val_index in k_fold.split(X_train[0]):
     print("%s %.2f%%" % ('Test data AUC value for that fold: ', score * 100))
     scores.append(score * 100)
     loggers.append(logger)
-
-    pred = utils.probas_to_classes(predicts)
-
-    false_preds = [(x, y, p) for (x, y, p) in zip(X_test, Y_test, predicts) if y.argmax(axis=-1) != p.argmax(axis=-1)]
-    print(len(false_preds))
 
 # RESULT
 
