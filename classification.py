@@ -66,7 +66,7 @@ for i in range(0, len(X_train), 2):
 combined = concatenate(outputs)
 
 h1 = Dense(50, activation='relu', use_bias=True)(combined)
-h2 = Dense(50, activation='relu', use_bias=True)(h1)
+h2 = Dense(30, activation='relu', use_bias=True)(h1)
 y = Dense(10, activation='softmax')(h2)
 
 loggers = []
@@ -85,6 +85,10 @@ print("%s %.2f%%" % ('Train data AUC value for that fold: ', score_train * 100))
 print("%s %.2f%%" % ('Test data AUC value for that fold: ', score * 100))
 scores.append(score * 100)
 loggers.append(logger)
+
+# Y_pred = model.predict_classes(X_test, verbose=1)
+# false_preds = [(x,y,p) for (x,y,p) in zip(X_test, Y_test, Y_pred) if y != p]
+# print(len(false_preds))
 
 # RESULT
 
