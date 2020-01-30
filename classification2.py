@@ -60,7 +60,7 @@ for train_index, val_index in k_fold.split(X_train):
     y_val = Y_train[result[1]]
 
     logger = AfterEpochLogger(5)
-    model.fit(x_train, y_train, validation_data=(x_val, y_val), epochs=10, batch_size=32, callbacks=[logger, cp_callback], shuffle=True)
+    model.fit(x_train, y_train, validation_data=(x_val, y_val), epochs=15, batch_size=32, callbacks=[logger, cp_callback], shuffle=True)
 
     predicts_train = model.predict(X_train)
     score_train = roc_auc_score(Y_train, predicts_train, average='micro')
