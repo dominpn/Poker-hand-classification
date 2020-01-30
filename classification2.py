@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from tensorflow.keras import Model
+from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Input, Dense
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import ModelCheckpoint
@@ -33,20 +33,20 @@ Y_train = one_hot_encode(df_train[len(df_train.columns) - 1])
 
 df_test = pd.read_csv('poker-hand-testing.data', header=None, sep=',')
 X_test = df_test.iloc[:,0:10].as_matrix()
-Y_test = one_hot_encode(df_test[len(df_test.columns) - 1])
+y_test_class = df_test[len(df_test.columns) - 1]
+Y_test = one_hot_encode(y_test_class)
 
-inputs = Input(shape=(len(X_train[0]),))
-h1 = Dense(100, activation='relu', use_bias=True)(inputs)
-h2 = Dense(200, activation='relu', use_bias=True)(h1)
-h3 = Dense(100, activation='relu', use_bias=True)(h2)
-y = Dense(10, activation='softmax')(h3)
+model = Sequential()
+model.add(Dense(100, input_shape=(10,), activation='relu', use_bias=True))
+model.add(Dense(200, activation='relu', use_bias=True))
+model.add(Dense(100, activation='relu', use_bias=True))
+model.add(Dense(10, activation='softmax'))
 
 loggers = []
 scores = []
 
 k_fold = KFold(n_splits=5)
 
-model = Model(inputs=inputs, outputs=y)
 model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer=Adam())
 cp_callback = ModelCheckpoint(filepath='poker-model.h5', save_weights_only=False, save_best_only=True, verbose=1)
 
@@ -60,7 +60,7 @@ for train_index, val_index in k_fold.split(X_train):
     y_val = Y_train[result[1]]
 
     logger = AfterEpochLogger(5)
-    model.fit(x_train, y_train, validation_data=(x_val, y_val), epochs=15, batch_size=32, callbacks=[logger, cp_callback], shuffle=True)
+    model.fit(x_train, y_train, validation_data=(x_val, y_val), epochs=30, batch_size=32, callbacks=[logger, cp_callback], shuffle=True)
 
     predicts_train = model.predict(X_train)
     score_train = roc_auc_score(Y_train, predicts_train, average='micro')
@@ -73,6 +73,11 @@ for train_index, val_index in k_fold.split(X_train):
 
 # RESULT
 
+y_pred = model.predict_classes(X_test, verbose=1)
+false_preds = [(x, y, p) for (x, y, p) in zip(X_test, y_test_class, y_pred) if y != p]
+
+print(f'False predicts: {len(false_preds)}')
+
 print("5 fold AUC (2 sigma/95%% confidence): %.2f%% (+/- %.2f%%)" % (np.mean(scores), 2*np.std(scores)))
 # TODO clean code
 plt.figure(figsize=(15, 20))
@@ -82,10 +87,14 @@ plt.ylabel('Training loss')
 plt.xlabel('Epoch')
 plt.title('Training loss')
 plt.plot(loggers[0].history_loss)
-plt.legend(['Fold 1'])
+plt.plot(loggers[1].history_loss)
+plt.plot(loggers[2].history_loss)
+plt.plot(loggers[3].history_loss)
+plt.plot(loggers[4].history_loss)
+plt.legend(['Fold 1', 'Fold 2', 'Fold 3', 'Fold 4', 'Fold 5'])
 plt.subplot(422)
 plt.title('Averaged training loss')
-avg_loss = loggers[0].history_loss
+avg_loss = np.sum([loggers[i].history_loss for i in range(5)], axis=0)/5
 plt.ylim([0, 1])
 plt.plot(avg_loss)
 
@@ -93,17 +102,25 @@ plt.subplot(423)
 plt.ylim([0, 1])
 plt.ylabel('Validation loss')
 plt.plot(loggers[0].val_history_loss)
+plt.plot(loggers[1].val_history_loss)
+plt.plot(loggers[2].val_history_loss)
+plt.plot(loggers[3].val_history_loss)
+plt.plot(loggers[4].val_history_loss)
 plt.subplot(424)
-avg_val_loss = loggers[0].val_history_loss
-plt.ylim([0, 1])
+avg_val_loss = np.sum([loggers[i].val_history_loss for i in range(5)], axis=0)/5
+plt.ylim([0,1])
 plt.plot(avg_val_loss)
 
 plt.subplot(425)
 plt.ylim([0, 1])
 plt.ylabel('Training acc')
 plt.plot(loggers[0].history_accuracy)
+plt.plot(loggers[1].history_accuracy)
+plt.plot(loggers[2].history_accuracy)
+plt.plot(loggers[3].history_accuracy)
+plt.plot(loggers[4].history_accuracy)
 plt.subplot(426)
-avg_acc = loggers[0].history_accuracy
+avg_acc = np.sum([loggers[i].history_accuracy for i in range(5)], axis=0)/5
 plt.ylim([0, 1])
 plt.plot(avg_acc)
 
@@ -111,8 +128,12 @@ plt.subplot(427)
 plt.ylim([0, 1])
 plt.ylabel('Validation acc')
 plt.plot(loggers[0].val_history_accuracy)
+plt.plot(loggers[1].val_history_accuracy)
+plt.plot(loggers[2].val_history_accuracy)
+plt.plot(loggers[3].val_history_accuracy)
+plt.plot(loggers[4].val_history_accuracy)
 plt.subplot(428)
-avg_val_acc = loggers[0].val_history_accuracy
+avg_val_acc = np.sum([loggers[i].val_history_accuracy for i in range(5)], axis=0)/5
 plt.ylim([0, 1])
 plt.plot(avg_val_acc)
 

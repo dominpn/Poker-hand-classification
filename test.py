@@ -42,7 +42,7 @@ h = model2.fit(
     X_train,
     Y_train,
     batch_size=32,
-    epochs=200,
+    epochs=2,
     shuffle=True,
     verbose=0
 )
