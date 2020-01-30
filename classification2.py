@@ -4,7 +4,6 @@ import numpy as np
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Input, Dense, concatenate
 from tensorflow.keras.optimizers import Adam
-from tensorflow.python.keras import utils
 
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import KFold
@@ -27,41 +26,19 @@ def one_hot_encode(x: pd.Series) -> np.array:
 
 df_train = pd.read_csv('poker-hand-training-true.data', header=None, sep=',')
 
-features = df_train.iloc[:, :-1].copy()
-X_train = []
+X_train = df_train.iloc[:, 0:10].as_matrix()
 Y_train = one_hot_encode(df_train[len(df_train.columns) - 1])
-for feature_column_number in features:
-    X_train.append(one_hot_encode(features[feature_column_number]))
 
 
 df_test = pd.read_csv('poker-hand-testing.data', header=None, sep=',')
-features = df_test.iloc[:, :-1].copy()
-X_test = []
+X_test = df_test.iloc[:,0:10].as_matrix()
 Y_test = one_hot_encode(df_test[len(df_test.columns) - 1])
-for feature_column_number in features:
-    X_test.append(one_hot_encode(features[feature_column_number]))
 
-inputs = []
-outputs = []
-
-for i in range(0, len(X_train), 2):
-    input_figure = Input(shape=(len(X_train[i][0]),))
-    input_color = Input(shape=(len(X_train[i+1][0]),))
-
-    figure_layer = Dense(5, activation='relu', use_bias=True)(input_figure)
-    color_layer = Dense(2, activation='relu', use_bias=True)(input_color)
-    # color
-
-    card_layer = Dense(5, activation='relu', use_bias=True)(concatenate([figure_layer, color_layer]))
-    inputs.append(input_figure)
-    inputs.append(input_color)
-    outputs.append(card_layer)
-
-combined = concatenate(outputs)
-
-h1 = Dense(50, activation='relu', use_bias=True)(combined)
-h2 = Dense(30, activation='relu', use_bias=True)(h1)
-y = Dense(10, activation='softmax')(h2)
+inputs = Input(shape=(len(X_train[0]),))
+h1 = Dense(100, activation='relu', use_bias=True)(inputs)
+h2 = Dense(200, activation='relu', use_bias=True)(h1)
+h3 = Dense(100, activation='relu', use_bias=True)(h2)
+y = Dense(10, activation='softmax')(h3)
 
 loggers = []
 scores = []
@@ -71,16 +48,18 @@ k_fold = KFold(n_splits=5)
 model = Model(inputs=inputs, outputs=y)
 model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer=Adam())
 
-for train_index, val_index in k_fold.split(X_train[0]):
-    X_train_split = []
-    X_val = []
-    for feature_index in range(len(X_train)):
-        X_train_split.append(X_train[feature_index][train_index])
-        X_val.append(X_train[feature_index][val_index])
-    Y_train_split, Y_val = Y_train[train_index], Y_train[val_index]
+for train_index, val_index in k_fold.split(X_train):
+    result = next(k_fold.split(X_train), None)
+    print(result)
+
+    x_train = X_train[result[0]]
+    x_val = X_train[result[1]]
+
+    y_train = Y_train[result[0]]
+    y_val = Y_train[result[1]]
 
     logger = AfterEpochLogger(5)
-    model.fit(X_train_split, Y_train_split, validation_data=(X_val, Y_val), epochs=10, batch_size=32, callbacks=[logger], shuffle=True)
+    model.fit(x_train, y_train, validation_data=(x_val, y_val), epochs=10, batch_size=32, callbacks=[logger], shuffle=True)
 
     predicts_train = model.predict(X_train)
     score_train = roc_auc_score(Y_train, predicts_train, average='micro')
@@ -90,11 +69,6 @@ for train_index, val_index in k_fold.split(X_train[0]):
     print("%s %.2f%%" % ('Test data AUC value for that fold: ', score * 100))
     scores.append(score * 100)
     loggers.append(logger)
-
-    pred = utils.probas_to_classes(predicts)
-
-    false_preds = [(x, y, p) for (x, y, p) in zip(X_test, Y_test, predicts) if y.argmax(axis=-1) != p.argmax(axis=-1)]
-    print(len(false_preds))
 
 # RESULT
 
