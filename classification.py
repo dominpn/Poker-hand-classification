@@ -4,14 +4,16 @@ import numpy as np
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Input, Dense, concatenate
 from tensorflow.keras.optimizers import Adam
-from tensorflow.python.keras import utils
 
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import KFold
+from sklearn.utils import resample, shuffle
 
 import matplotlib.pyplot as plt
 
 from logger import AfterEpochLogger
+
+NUMBER_OF_CLASSES = 10
 
 
 def one_hot_encode(x: pd.Series) -> np.array:
@@ -25,8 +27,20 @@ def one_hot_encode(x: pd.Series) -> np.array:
     return np.array(result)
 
 
-df_train = pd.read_csv('poker-hand-training-true.data', header=None, sep=',')
+def up_sample_data(df: pd.DataFrame) -> pd.DataFrame:
+    n_classes = df[len(df.columns) - 1].value_counts()
+    max_value = n_classes.max()
+    resampled = []
+    for hand_class in range(NUMBER_OF_CLASSES):
+        resampled.append(resample(df[df[(len(df.columns) - 1)] == hand_class],
+                                  replace=True,
+                                  n_samples=max_value,
+                                  random_state=123))
+    up_sampled_data = pd.concat(resampled)
+    return shuffle(up_sampled_data)
 
+
+df_train = up_sample_data(pd.read_csv('poker-hand-training-true.data', header=None, sep=','))
 features = df_train.iloc[:, :-1].copy()
 X_train = []
 Y_train = one_hot_encode(df_train[len(df_train.columns) - 1])
@@ -34,7 +48,7 @@ for feature_column_number in features:
     X_train.append(one_hot_encode(features[feature_column_number]))
 
 
-df_test = pd.read_csv('poker-hand-testing.data', header=None, sep=',')
+df_test = up_sample_data(pd.read_csv('poker-hand-testing.data', header=None, sep=','))
 features = df_test.iloc[:, :-1].copy()
 X_test = []
 Y_test = one_hot_encode(df_test[len(df_test.columns) - 1])
@@ -48,8 +62,8 @@ for i in range(0, len(X_train), 2):
     input_figure = Input(shape=(len(X_train[i][0]),))
     input_color = Input(shape=(len(X_train[i+1][0]),))
 
-    figure_layer = Dense(5, activation='relu', use_bias=True)(input_figure)
-    color_layer = Dense(2, activation='relu', use_bias=True)(input_color)
+    figure_layer = Dense(13, activation='relu', use_bias=True)(input_figure)
+    color_layer = Dense(4, activation='relu', use_bias=True)(input_color)
     # color
 
     card_layer = Dense(5, activation='relu', use_bias=True)(concatenate([figure_layer, color_layer]))
@@ -59,10 +73,9 @@ for i in range(0, len(X_train), 2):
 
 combined = concatenate(outputs)
 
-h1 = Dense(100, activation='relu', use_bias=True)(combined)
-h2 = Dense(200, activation='relu', use_bias=True)(h1)
-h3 = Dense(100, activation='relu', use_bias=True)(h2)
-y = Dense(10, activation='softmax')(h3)
+h1 = Dense(30, activation='relu', use_bias=True)(combined)
+h2 = Dense(20, activation='relu', use_bias=True)(h1)
+y = Dense(10, activation='softmax')(h2)
 
 loggers = []
 scores = []
@@ -137,4 +150,4 @@ avg_val_acc = loggers[0].val_history_accuracy
 plt.ylim([0, 1])
 plt.plot(avg_val_acc)
 
-plt.savefig('plot.png')
+plt.savefig('plot_net2.png')
